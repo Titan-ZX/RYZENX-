@@ -5,6 +5,7 @@ import { onMessageCreate } from "./messageCreate";
 import { onGuildMemberAdd } from "./guildMemberAdd";
 import { onGuildMemberRemove } from "./guildMemberRemove";
 import { onMessageReactionAdd } from "./messageReactionAdd";
+import { handleVoiceStateUpdate } from "../handlers/voicemaster";
 
 export function loadEvents(client: ExtendedClient) {
   client.once("clientReady", () => onReady(client));
@@ -13,4 +14,5 @@ export function loadEvents(client: ExtendedClient) {
   client.on("guildMemberAdd", (member) => onGuildMemberAdd(member));
   client.on("guildMemberRemove", (member) => onGuildMemberRemove(member));
   client.on("messageReactionAdd", (reaction, user) => onMessageReactionAdd(reaction as any, user as any));
+  client.on("voiceStateUpdate", (oldState, newState) => handleVoiceStateUpdate(oldState, newState));
 }

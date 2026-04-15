@@ -108,9 +108,112 @@ export async function initDatabase(): Promise<void> {
         bank BIGINT DEFAULT 0,
         last_daily TIMESTAMP,
         last_work TIMESTAMP,
+        last_fish TIMESTAMP,
+        last_hunt TIMESTAMP,
+        last_mine TIMESTAMP,
+        last_crime TIMESTAMP,
+        last_beg TIMESTAMP,
         daily_streak INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT NOW(),
         PRIMARY KEY (user_id, guild_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS voicemaster_settings (
+        guild_id TEXT PRIMARY KEY,
+        setup_channel TEXT,
+        category_id TEXT,
+        default_name TEXT DEFAULT '{username}''s Channel',
+        default_limit INTEGER DEFAULT 0
+      );
+
+      CREATE TABLE IF NOT EXISTS voicemaster_channels (
+        channel_id TEXT PRIMARY KEY,
+        guild_id TEXT NOT NULL,
+        owner_id TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS ticket_settings (
+        guild_id TEXT PRIMARY KEY,
+        category_id TEXT,
+        support_role TEXT,
+        log_channel TEXT,
+        ticket_count INTEGER DEFAULT 0
+      );
+
+      CREATE TABLE IF NOT EXISTS tickets (
+        id SERIAL PRIMARY KEY,
+        guild_id TEXT NOT NULL,
+        channel_id TEXT NOT NULL,
+        user_id TEXT NOT NULL,
+        claimed_by TEXT,
+        status TEXT DEFAULT 'open',
+        topic TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        closed_at TIMESTAMP
+      );
+
+      CREATE TABLE IF NOT EXISTS afk_users (
+        user_id TEXT NOT NULL,
+        guild_id TEXT NOT NULL,
+        reason TEXT DEFAULT 'AFK',
+        since TIMESTAMP DEFAULT NOW(),
+        PRIMARY KEY (user_id, guild_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS birthdays (
+        user_id TEXT NOT NULL,
+        guild_id TEXT NOT NULL,
+        birthday TEXT NOT NULL,
+        PRIMARY KEY (user_id, guild_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS user_profiles (
+        user_id TEXT NOT NULL,
+        guild_id TEXT NOT NULL,
+        bio TEXT,
+        background TEXT DEFAULT 'default',
+        PRIMARY KEY (user_id, guild_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS level_roles (
+        guild_id TEXT NOT NULL,
+        level INTEGER NOT NULL,
+        role_id TEXT NOT NULL,
+        PRIMARY KEY (guild_id, level)
+      );
+
+      CREATE TABLE IF NOT EXISTS noexp_channels (
+        guild_id TEXT NOT NULL,
+        channel_id TEXT NOT NULL,
+        PRIMARY KEY (guild_id, channel_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS inventory (
+        user_id TEXT NOT NULL,
+        guild_id TEXT NOT NULL,
+        item_id TEXT NOT NULL,
+        item_name TEXT NOT NULL,
+        quantity INTEGER DEFAULT 1,
+        PRIMARY KEY (user_id, guild_id, item_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS mod_notes (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        guild_id TEXT NOT NULL,
+        moderator_id TEXT NOT NULL,
+        note TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS hangman_games (
+        channel_id TEXT PRIMARY KEY,
+        word TEXT NOT NULL,
+        guessed TEXT[] DEFAULT '{}',
+        wrong INTEGER DEFAULT 0,
+        user_id TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
       );
     `);
     console.log("[DB] Database initialized successfully");
