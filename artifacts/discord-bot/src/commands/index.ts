@@ -20,6 +20,7 @@ import joke from "./fun/joke";
 import poll from "./fun/poll";
 import rps from "./fun/rps";
 import meme from "./fun/meme";
+import giveaway from "./fun/giveaway";
 import ping from "./utility/ping";
 import serverinfo from "./utility/serverinfo";
 import userinfo from "./utility/userinfo";
@@ -27,20 +28,30 @@ import avatar from "./utility/avatar";
 import remind from "./utility/remind";
 import botinfo from "./utility/botinfo";
 import math from "./utility/math";
+import help from "./utility/help";
+import setprefix from "./utility/setprefix";
 import rank from "./community/rank";
 import leaderboard from "./community/leaderboard";
 import welcome from "./community/welcome";
 import suggest from "./community/suggest";
 import autorole from "./community/autorole";
 import reactionrole from "./community/reactionrole";
-import giveaway from "./fun/giveaway";
+import balance from "./economy/balance";
+import daily from "./economy/daily";
+import work from "./economy/work";
+import pay from "./economy/pay";
+import deposit from "./economy/deposit";
+import withdraw from "./economy/withdraw";
+import rob from "./economy/rob";
+import richlb from "./economy/econleaderboard";
 
 const allCommands = [
   automod,
   ban, kick, timeout, unmute, warn, warnings, clearwarnings, purge, lockdown, unlock, slowmode, softban,
   eightball, roll, coinflip, joke, poll, rps, meme, giveaway,
-  ping, serverinfo, userinfo, avatar, remind, botinfo, math,
+  ping, serverinfo, userinfo, avatar, remind, botinfo, math, help, setprefix,
   rank, leaderboard, welcome, suggest, autorole, reactionrole,
+  balance, daily, work, pay, deposit, withdraw, rob, richlb,
 ];
 
 export function loadCommands(client: ExtendedClient) {

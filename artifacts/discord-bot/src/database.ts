@@ -92,6 +92,26 @@ export async function initDatabase(): Promise<void> {
         ended BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT NOW()
       );
+
+      CREATE TABLE IF NOT EXISTS giveaway_entries (
+        id SERIAL PRIMARY KEY,
+        giveaway_id INTEGER NOT NULL,
+        user_id TEXT NOT NULL,
+        entered_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE (giveaway_id, user_id)
+      );
+
+      CREATE TABLE IF NOT EXISTS economy (
+        user_id TEXT NOT NULL,
+        guild_id TEXT NOT NULL,
+        wallet BIGINT DEFAULT 0,
+        bank BIGINT DEFAULT 0,
+        last_daily TIMESTAMP,
+        last_work TIMESTAMP,
+        daily_streak INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW(),
+        PRIMARY KEY (user_id, guild_id)
+      );
     `);
     console.log("[DB] Database initialized successfully");
   } finally {
