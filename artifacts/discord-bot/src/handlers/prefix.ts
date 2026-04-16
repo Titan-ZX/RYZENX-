@@ -32,6 +32,14 @@ function waifu(type: string) {
 
 export async function handlePrefixCommand(message: Message, prefix: string) {
   if (!message.content.startsWith(prefix)) return;
+  try {
+    return await _handlePrefix(message, prefix);
+  } catch (err: any) {
+    console.error("[Prefix] Error:", err?.message || err);
+  }
+}
+
+async function _handlePrefix(message: Message, prefix: string) {
 
   const raw = message.content.slice(prefix.length).trim();
   const args = raw.split(/\s+/);
@@ -581,7 +589,7 @@ export async function handlePrefixCommand(message: Message, prefix: string) {
     if (!member.permissions.has(PermissionFlagsBits.ManageGuild))
       return message.reply("❌ You need **Manage Server** permission.");
     const gwId = parseInt(args[0]);
-    if (isNaN(gwId)) return message.reply("❌ Provide a valid giveaway ID.");
+    if (isNaN(gwId) || gwId < 1 || gwId > 2_147_483_647) return message.reply("❌ Provide a valid giveaway ID (the small number shown in the giveaway message).");
 
     const check = await pool.query("SELECT 1 FROM giveaways WHERE id = $1 AND guild_id = $2 AND ended = false", [gwId, guild.id]);
     if (!check.rows.length) return message.reply("❌ Active giveaway not found.");
@@ -604,7 +612,7 @@ export async function handlePrefixCommand(message: Message, prefix: string) {
       return message.reply("❌ You need **Manage Server** permission.");
     const gwId = parseInt(args[0]);
     const count = parseInt(args[1]) || 1;
-    if (isNaN(gwId)) return message.reply("❌ Provide a valid giveaway ID.");
+    if (isNaN(gwId) || gwId < 1 || gwId > 2_147_483_647) return message.reply("❌ Provide a valid giveaway ID.");
 
     const check = await pool.query("SELECT * FROM giveaways WHERE id = $1 AND guild_id = $2", [gwId, guild.id]);
     if (!check.rows.length) return message.reply("❌ Giveaway not found.");

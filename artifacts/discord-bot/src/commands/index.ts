@@ -81,6 +81,11 @@ import removerole from "./security/removerole";
 import dehoist from "./security/dehoist";
 import modnote from "./security/modnote";
 import antinuke from "./security/antinuke";
+import history from "./security/history";
+import lockserver from "./security/lockserver";
+import viewbans from "./security/viewbans";
+import modcase from "./security/case";
+import modlog from "./security/modlog";
 
 // 🆕 Economy
 import fish from "./economy/fish";
@@ -119,8 +124,9 @@ import starboard from "./community/starboard";
 const allCommands = [
   // Core Security (12) + Discord AutoMod
   automod, discordmod, ban, kick, timeout, unmute, warn, warnings, clearwarnings, purge, lockdown, unlock, slowmode, softban,
-  // Extended Security (9)
+  // Extended Security (9 + 5 new)
   unban, massban, nick, nuke, addrole, removerole, dehoist, modnote, antinuke,
+  history, lockserver, modcase, modlog,
   // Fun/Games (11 original + 11 new = 22)
   eightball, roll, coinflip, joke, poll, rps, meme, giveaway,
   textfun, trivia, slots, blackjack, tictactoe, truthordare, neverhaveiever, wouldyourather, ship, guess, hangman,
