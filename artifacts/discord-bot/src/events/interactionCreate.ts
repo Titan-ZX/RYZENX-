@@ -61,20 +61,6 @@ export async function onInteractionCreate(client: ExtendedClient, interaction: I
   if (interaction.isButton()) {
     const id = interaction.customId;
 
-    // ─── GIVEAWAY ───────────────────────────────────────────
-    if (id.startsWith("giveaway_enter_")) {
-      const giveawayId = id.replace("giveaway_enter_", "");
-      const gw = await pool.query("SELECT * FROM giveaways WHERE id = $1 AND ended = false", [giveawayId]);
-      if (!gw.rows.length) return interaction.reply({ content: "❌ This giveaway has already ended.", ephemeral: true });
-
-      const already = await pool.query("SELECT id FROM giveaway_entries WHERE giveaway_id = $1 AND user_id = $2", [giveawayId, interaction.user.id]);
-      if (already.rows.length) return interaction.reply({ content: "⚠️ You're already entered in this giveaway!", ephemeral: true });
-
-      await pool.query("INSERT INTO giveaway_entries (giveaway_id, user_id) VALUES ($1, $2)", [giveawayId, interaction.user.id]);
-      const countRes = await pool.query("SELECT COUNT(*) FROM giveaway_entries WHERE giveaway_id = $1", [giveawayId]);
-      return interaction.reply({ content: `🎉 Entered **${gw.rows[0].prize}**! Total entries: **${countRes.rows[0].count}**`, ephemeral: true });
-    }
-
     // ─── TICKET BUTTONS ─────────────────────────────────────
     if (id === "ticket_create_btn") {
       const config = await pool.query("SELECT * FROM ticket_settings WHERE guild_id = $1", [interaction.guild!.id]);

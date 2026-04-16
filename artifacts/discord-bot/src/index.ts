@@ -3,6 +3,7 @@ import { initDatabase } from "./database";
 import { loadCommands } from "./commands";
 import { loadEvents } from "./events";
 import { startReminderCron } from "./handlers/reminders";
+import { startGiveawayCron } from "./handlers/giveaway";
 
 async function main() {
   console.log("[Bot] Starting Discord bot...");
@@ -17,6 +18,7 @@ async function main() {
   console.log("[Bot] Events loaded");
 
   startReminderCron(client);
+  startGiveawayCron(client);
 
   const token = process.env.DISCORD_TOKEN;
   if (!token) {

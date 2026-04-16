@@ -3,15 +3,13 @@ import {
   EmbedBuilder,
   PermissionFlagsBits,
   TextChannel,
-  ActionRowBuilder,
-  ButtonBuilder,
-  ButtonStyle,
   GuildMember,
 } from "discord.js";
 import { pool } from "../database";
 import { getOrCreateEconomy } from "./economy";
 import { calculateLevel } from "./leveling";
 import { buildHelpEmbed, buildHelpRow } from "../commands/utility/help";
+import { endGiveaway, fetchReactionEntries, pickWinners } from "./giveaway";
 
 const EIGHTBALL_RESPONSES = [
   "✅ It is certain.", "✅ Without a doubt.", "✅ Yes, definitely!",
@@ -530,13 +528,14 @@ export async function handlePrefixCommand(message: Message, prefix: string) {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // GIVEAWAY
+  // GIVEAWAY  (reaction-based: react 🎉 to enter)
   // ─────────────────────────────────────────────────────────────
 
   if (cmd === "gstart") {
-    if (!member.permissions.has(PermissionFlagsBits.ManageGuild)) return message.reply("❌ You need **Manage Server** permission.");
-    // +gstart <time: 10m|1h> <winners: 1> <prize...>
-    if (args.length < 3) return message.reply("❌ Usage: `+gstart <time> <winners> <prize>`\nExample: `+gstart 10m 2 Discord Nitro`");
+    if (!member.permissions.has(PermissionFlagsBits.ManageGuild))
+      return message.reply("❌ You need **Manage Server** permission.");
+    if (args.length < 3)
+      return message.reply("❌ **Usage:** `+gstart <time> <winners> <prize>`\nExample: `+gstart 10m 2 Discord Nitro`");
 
     const timeStr = args[0];
     const winners = parseInt(args[1]);
@@ -544,10 +543,12 @@ export async function handlePrefixCommand(message: Message, prefix: string) {
 
     if (isNaN(winners) || winners < 1) return message.reply("❌ Invalid winner count.");
     const match = timeStr.match(/^(\d+)([smhd])$/);
-    if (!match) return message.reply("❌ Invalid time format. Use `10m`, `1h`, `2h`, `1d` etc.");
+    if (!match) return message.reply("❌ Invalid time. Use `10m`, `1h`, `2h`, `1d` etc.");
 
-    const durationMs = parseInt(match[1]) * { s: 1000, m: 60000, h: 3600000, d: 86400000 }[match[2] as string]!;
+    const multipliers: Record<string, number> = { s: 1000, m: 60000, h: 3600000, d: 86400000 };
+    const durationMs = parseInt(match[1]) * multipliers[match[2]];
     const endsAt = new Date(Date.now() + durationMs);
+    const endsTs  = Math.floor(endsAt.getTime() / 1000);
 
     const gwResult = await pool.query(
       "INSERT INTO giveaways (guild_id, channel_id, host_id, prize, winners, ends_at) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id",
@@ -557,67 +558,82 @@ export async function handlePrefixCommand(message: Message, prefix: string) {
 
     const embed = new EmbedBuilder()
       .setColor(0xffd700)
-      .setTitle("🎉 GIVEAWAY!")
-      .setDescription(`## 🎁 ${prize}\n\n**Click the button below to enter!**`)
+      .setTitle("🎉  G I V E A W A Y  🎉")
+      .setDescription(`## 🎁 ${prize}\n\nReact with 🎉 below to enter!`)
       .addFields(
-        { name: "🏆 Winners", value: `${winners}`, inline: true },
-        { name: "⏰ Ends", value: `<t:${Math.floor(endsAt.getTime() / 1000)}:R>`, inline: true },
-        { name: "🎪 Hosted By", value: `<@${author.id}>`, inline: true },
-        { name: "🆔 Giveaway ID", value: `#${gwId}`, inline: true },
-        { name: "👥 Entries", value: "0", inline: true },
+        { name: "🏆 Winners",   value: `**${winners}**`,           inline: true },
+        { name: "⏰ Ends",      value: `<t:${endsTs}:R>`,          inline: true },
+        { name: "📅 End Time",  value: `<t:${endsTs}:F>`,          inline: true },
+        { name: "🎪 Hosted by", value: `<@${author.id}>`,          inline: true },
+        { name: "🆔 ID",        value: `#${gwId}`,                 inline: true },
       )
-      .setFooter({ text: "RYZENX™ Giveaway System" })
+      .setFooter({ text: "RYZENX™ Giveaway System  •  React 🎉 to enter!" })
       .setTimestamp(endsAt);
 
-    const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-      new ButtonBuilder().setCustomId(`giveaway_enter_${gwId}`).setLabel("🎉 Enter Giveaway").setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId(`giveaway_info_${gwId}`).setLabel("📊 Info").setStyle(ButtonStyle.Secondary),
-    );
-
-    const msg = await (message.channel as TextChannel).send({ embeds: [embed], components: [row] });
+    const msg = await (message.channel as TextChannel).send({ embeds: [embed] });
+    await msg.react("🎉").catch(() => {});
     await pool.query("UPDATE giveaways SET message_id = $1 WHERE id = $2", [msg.id, gwId]);
     await message.delete().catch(() => {});
     return;
   }
 
   if (cmd === "gend") {
-    if (!member.permissions.has(PermissionFlagsBits.ManageGuild)) return message.reply("❌ You need **Manage Server** permission.");
+    if (!member.permissions.has(PermissionFlagsBits.ManageGuild))
+      return message.reply("❌ You need **Manage Server** permission.");
     const gwId = parseInt(args[0]);
     if (isNaN(gwId)) return message.reply("❌ Provide a valid giveaway ID.");
 
-    const result = await pool.query("SELECT * FROM giveaways WHERE id = $1 AND guild_id = $2 AND ended = false", [gwId, guild.id]);
-    if (!result.rows.length) return message.reply("❌ Active giveaway not found.");
+    const check = await pool.query("SELECT 1 FROM giveaways WHERE id = $1 AND guild_id = $2 AND ended = false", [gwId, guild.id]);
+    if (!check.rows.length) return message.reply("❌ Active giveaway not found.");
 
-    const giveaway = result.rows[0];
-    const entries = await pool.query("SELECT user_id FROM giveaway_entries WHERE giveaway_id = $1", [gwId]);
-    const pool2 = entries.rows.map((r: any) => r.user_id);
-    const selected: string[] = [];
-    const copy = [...pool2];
-    for (let i = 0; i < Math.min(giveaway.winners, copy.length); i++) {
-      const idx = Math.floor(Math.random() * copy.length);
-      selected.push(`<@${copy[idx]}>`);
-      copy.splice(idx, 1);
-    }
-
-    const winnerText = selected.length ? selected.join(", ") : "No participants";
-    await pool.query("UPDATE giveaways SET ended = true WHERE id = $1", [gwId]);
+    const result = await endGiveaway(message.client, gwId, author.tag);
+    if (!result) return message.reply("❌ Could not end giveaway.");
+    const { winners, entries } = result;
+    const winnerText = winners.length ? winners.map((id) => `<@${id}>`).join(", ") : "No participants";
 
     return message.reply({ embeds: [new EmbedBuilder()
       .setColor(0xffd700)
       .setTitle("🎉 Giveaway Ended!")
-      .setDescription(`## 🎁 ${giveaway.prize}\n\n🏆 **Winner(s):** ${winnerText}`)
-      .addFields({ name: "📊 Total Entries", value: `${pool2.length}`, inline: true })
+      .setDescription(`🏆 **Winner(s):** ${winnerText}\n👥 **Participants:** ${entries.length}`)
       .setFooter({ text: "RYZENX™ Giveaway System" })
       .setTimestamp()] });
   }
 
-  if (cmd === "gleaderboard" || cmd === "glist") {
+  if (cmd === "greroll") {
+    if (!member.permissions.has(PermissionFlagsBits.ManageGuild))
+      return message.reply("❌ You need **Manage Server** permission.");
+    const gwId = parseInt(args[0]);
+    const count = parseInt(args[1]) || 1;
+    if (isNaN(gwId)) return message.reply("❌ Provide a valid giveaway ID.");
+
+    const check = await pool.query("SELECT * FROM giveaways WHERE id = $1 AND guild_id = $2", [gwId, guild.id]);
+    if (!check.rows.length) return message.reply("❌ Giveaway not found.");
+
+    const giveaway = check.rows[0];
+    const entries = await fetchReactionEntries(message.client, giveaway);
+    if (!entries.length) return message.reply("❌ No valid entries found.");
+
+    const newWinners = pickWinners(entries, count);
+    const winnerText = newWinners.map((id) => `<@${id}>`).join(", ");
+
+    return message.reply({ embeds: [new EmbedBuilder()
+      .setColor(0xff9ff3)
+      .setTitle("🔄 Re-rolled!")
+      .setDescription(`🎁 **Prize:** ${giveaway.prize}\n🏆 **New Winner(s):** ${winnerText}`)
+      .setFooter({ text: `Re-rolled by ${author.tag} • RYZENX™` })
+      .setTimestamp()] });
+  }
+
+  if (cmd === "glist" || cmd === "gleaderboard") {
     const result = await pool.query(
       "SELECT * FROM giveaways WHERE guild_id = $1 AND ended = false ORDER BY ends_at ASC",
       [guild.id]
     );
     if (!result.rows.length) return message.reply("📭 No active giveaways.");
-    const lines = result.rows.map((g: any) => `**#${g.id}** — ${g.prize} | Ends: <t:${Math.floor(new Date(g.ends_at).getTime() / 1000)}:R>`);
-    return message.reply({ embeds: [new EmbedBuilder().setColor(0xffd700).setTitle("🎉 Active Giveaways").setDescription(lines.join("\n")).setFooter({ text: "RYZENX™" })] });
+    const lines = result.rows.map((g: any) => {
+      const ts = Math.floor(new Date(g.ends_at).getTime() / 1000);
+      return `🎁 **#${g.id}** — **${g.prize}** | Ends <t:${ts}:R> | 🏆 ${g.winners} winner(s)`;
+    });
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0xffd700).setTitle("🎉 Active Giveaways").setDescription(lines.join("\n")).setFooter({ text: "RYZENX™ Giveaway System" }).setTimestamp()] });
   }
 }
