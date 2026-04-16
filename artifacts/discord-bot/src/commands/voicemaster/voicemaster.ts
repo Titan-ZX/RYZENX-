@@ -26,7 +26,6 @@ export default {
       sub
         .setName("setup")
         .setDescription("🔧 Set up the Voice Master system")
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addChannelOption((opt) =>
           opt.setName("category").setDescription("Category to create VCs in").setRequired(true)
         )

@@ -3,35 +3,68 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from "
 export default {
   data: new SlashCommandBuilder()
     .setName("botinfo")
-    .setDescription("Get information about the bot"),
+    .setDescription("⚡ RYZENX™ system stats, uptime & features"),
 
   async execute(interaction: ChatInputCommandInteraction) {
     const client = interaction.client;
     const uptime = process.uptime();
-    const hours = Math.floor(uptime / 3600);
-    const minutes = Math.floor((uptime % 3600) / 60);
-    const seconds = Math.floor(uptime % 60);
-    const uptimeStr = `${hours}h ${minutes}m ${seconds}s`;
+    const d = Math.floor(uptime / 86400);
+    const h = Math.floor((uptime % 86400) / 3600);
+    const m = Math.floor((uptime % 3600) / 60);
+    const s = Math.floor(uptime % 60);
+    const uptimeStr = `${d > 0 ? d + "d " : ""}${h}h ${m}m ${s}s`;
 
-    const memUsage = process.memoryUsage();
-    const memMB = (memUsage.heapUsed / 1024 / 1024).toFixed(2);
+    const mem = process.memoryUsage();
+    const memMB = (mem.heapUsed / 1024 / 1024).toFixed(1);
+    const totalMB = (mem.heapTotal / 1024 / 1024).toFixed(1);
+    const memPct = Math.floor((mem.heapUsed / mem.heapTotal) * 100);
+    const memBar = "█".repeat(Math.floor(memPct / 10)) + "░".repeat(10 - Math.floor(memPct / 10));
+
+    const totalUsers = client.guilds.cache.reduce((acc, g) => acc + g.memberCount, 0);
 
     const embed = new EmbedBuilder()
       .setColor(0x5865f2)
-      .setTitle(`${client.user?.username} — Bot Info`)
-      .setThumbnail(client.user?.displayAvatarURL() || null)
+      .setAuthor({ name: "RYZENX™  •  Ultra-Advanced Discord Bot", iconURL: client.user?.displayAvatarURL() })
+      .setTitle(`⚡ ${client.user?.username} — System Dashboard`)
+      .setThumbnail(client.user?.displayAvatarURL({ size: 256 }) ?? null)
       .addFields(
-        { name: "🤖 Bot Tag", value: client.user?.tag || "Unknown", inline: true },
-        { name: "🆔 Bot ID", value: client.user?.id || "Unknown", inline: true },
-        { name: "🏠 Servers", value: client.guilds.cache.size.toString(), inline: true },
-        { name: "👥 Users", value: client.users.cache.size.toString(), inline: true },
-        { name: "⏱️ Uptime", value: uptimeStr, inline: true },
-        { name: "📡 Ping", value: `${client.ws.ping}ms`, inline: true },
-        { name: "💾 Memory", value: `${memMB} MB`, inline: true },
-        { name: "⚙️ Node.js", value: process.version, inline: true },
-        { name: "📦 Discord.js", value: "v14", inline: true },
-        { name: "🛡️ Features", value: "Automod • Security • Fun • Utility • Community", inline: false },
+        {
+          name: "📊 Bot Stats",
+          value: [
+            `🤖 **Tag:** ${client.user?.tag}`,
+            `🆔 **ID:** \`${client.user?.id}\``,
+            `🏠 **Servers:** ${client.guilds.cache.size}`,
+            `👥 **Total Users:** ${totalUsers.toLocaleString()}`,
+          ].join("\n"),
+          inline: true,
+        },
+        {
+          name: "⚙️ Performance",
+          value: [
+            `⏱️ **Uptime:** ${uptimeStr}`,
+            `📡 **Ping:** ${client.ws.ping}ms`,
+            `💾 **Memory:** ${memMB}/${totalMB} MB`,
+            `\`[${memBar}]\` ${memPct}%`,
+          ].join("\n"),
+          inline: true,
+        },
+        {
+          name: "🛠️ Technical",
+          value: [
+            `⚙️ **Node.js:** ${process.version}`,
+            `📦 **Discord.js:** v14`,
+            `🗄️ **Database:** PostgreSQL`,
+            `🚀 **Platform:** Replit`,
+          ].join("\n"),
+          inline: true,
+        },
+        {
+          name: "🌟 Features",
+          value: "🛡️ AutoMod  ⚔️ Security  🎮 Games  💰 Economy  🎙️ Voice Master  🎫 Tickets  🌟 Community  🔧 Utility  💕 Social",
+          inline: false,
+        },
       )
+      .setFooter({ text: `RYZENX™  •  150+ Commands  •  Always Improving` })
       .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });

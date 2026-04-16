@@ -2,11 +2,32 @@ import { SlashCommandBuilder, ChatInputCommandInteraction, EmbedBuilder } from "
 import { pool } from "../../database";
 import { calculateLevel, xpForLevel } from "../../handlers/leveling";
 
+function rankMedal(rank: number): string {
+  if (rank === 1) return "🥇";
+  if (rank === 2) return "🥈";
+  if (rank === 3) return "🥉";
+  if (rank <= 10) return "🏅";
+  return `#${rank}`;
+}
+
+function xpBar(current: number, needed: number): string {
+  const pct = Math.min(Math.floor((current / needed) * 20), 20);
+  return "█".repeat(pct) + "░".repeat(20 - pct);
+}
+
+function levelColor(level: number): number {
+  if (level >= 50) return 0xffd700;
+  if (level >= 30) return 0xe91e63;
+  if (level >= 20) return 0x9c27b0;
+  if (level >= 10) return 0x2196f3;
+  return 0x00ff88;
+}
+
 export default {
   data: new SlashCommandBuilder()
     .setName("rank")
-    .setDescription("View your or another user's XP rank")
-    .addUserOption((opt) => opt.setName("user").setDescription("User to check rank for")),
+    .setDescription("⭐ View XP rank, level & progress bar")
+    .addUserOption((opt) => opt.setName("user").setDescription("User to check")),
 
   async execute(interaction: ChatInputCommandInteraction) {
     const target = interaction.options.getUser("user") || interaction.user;
@@ -17,35 +38,43 @@ export default {
     );
 
     if (!result.rows.length) {
-      return interaction.reply({ content: `${target.username} hasn't earned any XP yet!`, ephemeral: true });
+      return interaction.reply({
+        embeds: [new EmbedBuilder().setColor(0x888888).setDescription(`📭 **${target.username}** hasn't sent any messages yet!`)],
+        ephemeral: true,
+      });
     }
 
-    const userData = result.rows[0];
-    const level = calculateLevel(userData.xp);
+    const { xp, total_messages } = result.rows[0];
+    const level = calculateLevel(xp);
     const currentLevelXP = xpForLevel(level);
     const nextLevelXP = xpForLevel(level + 1);
-    const progressXP = userData.xp - currentLevelXP;
+    const progressXP = xp - currentLevelXP;
     const neededXP = nextLevelXP - currentLevelXP;
     const percent = Math.min(Math.floor((progressXP / neededXP) * 100), 100);
-    const bar = "█".repeat(Math.floor(percent / 10)) + "░".repeat(10 - Math.floor(percent / 10));
 
     const rankResult = await pool.query(
       "SELECT user_id FROM user_levels WHERE guild_id = $1 ORDER BY xp DESC",
       [interaction.guild!.id]
     );
     const rank = rankResult.rows.findIndex((r: any) => r.user_id === target.id) + 1;
+    const medal = rankMedal(rank);
+
+    const color = levelColor(level);
+    const bar = xpBar(progressXP, neededXP);
 
     const embed = new EmbedBuilder()
-      .setColor(0x00ff88)
-      .setTitle(`📊 ${target.username}'s Rank`)
-      .setThumbnail(target.displayAvatarURL())
+      .setColor(color)
+      .setAuthor({ name: `${target.username}  •  Level ${level}`, iconURL: target.displayAvatarURL({ size: 128 }) })
+      .setTitle(`${medal} Server Rank`)
+      .setThumbnail(target.displayAvatarURL({ size: 256 }))
       .addFields(
-        { name: "🏆 Rank", value: `#${rank} of ${rankResult.rows.length}`, inline: true },
-        { name: "⭐ Level", value: level.toString(), inline: true },
-        { name: "✨ XP", value: `${userData.xp}`, inline: true },
-        { name: "💬 Messages", value: userData.total_messages.toString(), inline: true },
-        { name: `Progress to Level ${level + 1}`, value: `\`${bar}\` ${percent}%\n${progressXP}/${neededXP} XP` },
+        { name: "🏆 Rank", value: `**${medal}** of ${rankResult.rows.length}`, inline: true },
+        { name: "⭐ Level", value: `**${level}**`, inline: true },
+        { name: "✨ Total XP", value: `**${xp.toLocaleString()}**`, inline: true },
+        { name: "💬 Messages", value: `**${total_messages.toLocaleString()}**`, inline: true },
+        { name: `📈 Progress to Level ${level + 1}`, value: `\`[${bar}]\` **${percent}%**\n${progressXP.toLocaleString()} / ${neededXP.toLocaleString()} XP needed`, inline: false },
       )
+      .setFooter({ text: "RYZENX™ Leveling  •  Keep chatting to earn XP!" })
       .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });

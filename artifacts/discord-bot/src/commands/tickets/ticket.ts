@@ -71,7 +71,6 @@ export default {
       sub
         .setName("setup")
         .setDescription("⚙️ Set up the ticket system")
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addChannelOption((opt) => opt.setName("category").setDescription("Category for tickets").setRequired(true))
         .addRoleOption((opt) => opt.setName("support_role").setDescription("Support staff role"))
         .addChannelOption((opt) => opt.setName("log_channel").setDescription("Log channel for tickets"))
@@ -80,7 +79,6 @@ export default {
       sub
         .setName("panel")
         .setDescription("📌 Send ticket panel to a channel")
-        .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
         .addChannelOption((opt) => opt.setName("channel").setDescription("Channel to send panel in").setRequired(true))
         .addStringOption((opt) => opt.setName("description").setDescription("Panel description"))
     )
@@ -110,7 +108,6 @@ export default {
       sub
         .setName("delete")
         .setDescription("🗑️ Permanently delete this ticket")
-        .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels)
     )
     .addSubcommand((sub) => sub.setName("list").setDescription("📋 List all open tickets")),
 
