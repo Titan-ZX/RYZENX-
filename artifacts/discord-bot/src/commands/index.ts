@@ -46,6 +46,9 @@ import withdraw from "./economy/withdraw";
 import rob from "./economy/rob";
 import richlb from "./economy/econleaderboard";
 
+// 🆕 Discord Native AutoMod
+import discordmod from "./automod/discordmod";
+
 // 🆕 Voice Master
 import voicemaster from "./voicemaster/voicemaster";
 
@@ -114,8 +117,8 @@ import noexp from "./community/noexp";
 import starboard from "./community/starboard";
 
 const allCommands = [
-  // Core Security (12)
-  automod, ban, kick, timeout, unmute, warn, warnings, clearwarnings, purge, lockdown, unlock, slowmode, softban,
+  // Core Security (12) + Discord AutoMod
+  automod, discordmod, ban, kick, timeout, unmute, warn, warnings, clearwarnings, purge, lockdown, unlock, slowmode, softban,
   // Extended Security (9)
   unban, massban, nick, nuke, addrole, removerole, dehoist, modnote, antinuke,
   // Fun/Games (11 original + 11 new = 22)

@@ -2,7 +2,8 @@ import { Message, EmbedBuilder } from "discord.js";
 import { ExtendedClient } from "../types";
 import { handleAutomod } from "../handlers/automod";
 import { handleLeveling } from "../handlers/leveling";
-import { getGuildSettings, pool } from "../database";
+import { handlePrefixCommand } from "../handlers/prefix";
+import { pool } from "../database";
 import { buildHelpEmbed, buildHelpRow } from "../commands/utility/help";
 
 const spamMap = new Map<string, { count: number; lastMessage: number }>();
@@ -50,8 +51,7 @@ export async function onMessageCreate(client: ExtendedClient, message: Message) 
   }
 
   // ─── Mention = help menu ──────────────────────────────────────
-  const isMentioned = message.mentions.has(client.user!) && message.content.trim().match(/^<@!?(\d+)>(\s+.*)?$/);
-  if (isMentioned && message.content.trim().match(/^<@!?(\d+)>$/)) {
+  if (message.mentions.has(client.user!) && message.content.trim().match(/^<@!?\d+>$/)) {
     const embed = buildHelpEmbed(client);
     const row = buildHelpRow();
     await message.reply({ embeds: [embed], components: [row] });
@@ -62,18 +62,18 @@ export async function onMessageCreate(client: ExtendedClient, message: Message) 
   await handleAutomod(message, spamMap);
   await handleLeveling(message);
 
-  // ─── Prefix commands ──────────────────────────────────────────
-  const settings = await getGuildSettings(message.guild.id);
-  const prefix = settings.prefix || "!";
+  // ─── Prefix commands ─────────────────────────────────────────
+  // Support both "+" prefix and server's custom prefix
+  const PLUS_PREFIX = "+";
+  if (message.content.startsWith(PLUS_PREFIX)) {
+    await handlePrefixCommand(message, PLUS_PREFIX);
+    return;
+  }
 
-  if (!message.content.startsWith(prefix)) return;
-
-  const args = message.content.slice(prefix.length).trim().split(/\s+/);
-  const cmdName = args.shift()?.toLowerCase();
-
-  if (cmdName === "help") {
-    const embed = buildHelpEmbed(client);
-    const row = buildHelpRow();
-    await message.reply({ embeds: [embed], components: [row] });
+  // Also check guild custom prefix (e.g. !, $, etc.)
+  const prefixResult = await pool.query("SELECT prefix FROM guild_settings WHERE guild_id = $1", [message.guild.id]).catch(() => null);
+  const customPrefix = prefixResult?.rows[0]?.prefix;
+  if (customPrefix && customPrefix !== PLUS_PREFIX && message.content.startsWith(customPrefix)) {
+    await handlePrefixCommand(message, customPrefix);
   }
 }
