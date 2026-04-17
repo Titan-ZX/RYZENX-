@@ -1,5 +1,8 @@
 import { ExtendedClient } from "../types";
 
+// 🎵 Music
+import music from "./music/music";
+
 // Existing
 import automod from "./automod/automod";
 import ban from "./security/ban";
@@ -11,7 +14,6 @@ import warnings from "./security/warnings";
 import clearwarnings from "./security/clearwarnings";
 import purge from "./security/purge";
 import lockdown from "./security/lockdown";
-import unlock from "./security/unlock";
 import slowmode from "./security/slowmode";
 import softban from "./security/softban";
 import eightball from "./fun/eightball";
@@ -122,8 +124,8 @@ import noexp from "./community/noexp";
 import starboard from "./community/starboard";
 
 const allCommands = [
-  // Core Security (12) + Discord AutoMod
-  automod, discordmod, ban, kick, timeout, unmute, warn, warnings, clearwarnings, purge, lockdown, unlock, slowmode, softban,
+  // Core Security + Discord AutoMod (lockdown now includes unlock as subcommand)
+  automod, discordmod, ban, kick, timeout, unmute, warn, warnings, clearwarnings, purge, lockdown, slowmode, softban,
   // Extended Security (9 + 5 new)
   unban, massban, nick, nuke, addrole, removerole, dehoist, modnote, antinuke,
   history, lockserver, modcase, modlog,
@@ -140,7 +142,7 @@ const allCommands = [
   balance, daily, work, pay, deposit, withdraw, rob, richlb,
   fish, hunt, mine, beg, crime, gamble, shop, inventory,
   // Systems
-  voicemaster, ticket, social,
+  voicemaster, ticket, social, music,
 ];
 
 export function loadCommands(client: ExtendedClient) {

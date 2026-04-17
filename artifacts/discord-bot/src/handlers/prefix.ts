@@ -644,4 +644,197 @@ async function _handlePrefix(message: Message, prefix: string) {
     });
     return message.reply({ embeds: [new EmbedBuilder().setColor(0xffd700).setTitle("🎉 Active Giveaways").setDescription(lines.join("\n")).setFooter({ text: "RYZENX™ Giveaway System" }).setTimestamp()] });
   }
+
+  // ─────────────────────────────────────────────────────────────
+  // CHANNEL MODERATION
+  // ─────────────────────────────────────────────────────────────
+
+  if (cmd === "lock") {
+    if (!member.permissions.has(PermissionFlagsBits.ManageChannels)) return message.reply("❌ You need **Manage Channels** permission.");
+    const reason = args.join(" ") || "No reason provided";
+    await (message.channel as TextChannel).permissionOverwrites.edit(guild.roles.everyone, { SendMessages: false, AddReactions: false });
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0xff0000).setTitle("🔒 Channel Locked").setDescription(`This channel has been locked.\n**Reason:** ${reason}`).setFooter({ text: "RYZENX™ Security" }).setTimestamp()] });
+  }
+
+  if (cmd === "unlock") {
+    if (!member.permissions.has(PermissionFlagsBits.ManageChannels)) return message.reply("❌ You need **Manage Channels** permission.");
+    await (message.channel as TextChannel).permissionOverwrites.edit(guild.roles.everyone, { SendMessages: null, AddReactions: null });
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0x00ff88).setTitle("🔓 Channel Unlocked").setDescription("Channel is now open for everyone.").setFooter({ text: "RYZENX™ Security" }).setTimestamp()] });
+  }
+
+  if (cmd === "slowmode" || cmd === "slow") {
+    if (!member.permissions.has(PermissionFlagsBits.ManageChannels)) return message.reply("❌ You need **Manage Channels** permission.");
+    const seconds = Math.min(parseInt(args[0]) || 0, 21600);
+    await (message.channel as TextChannel).setRateLimitPerUser(seconds);
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0xffaa00).setDescription(seconds === 0 ? "✅ Slowmode **disabled**." : `✅ Slowmode set to **${seconds}s**.`)] });
+  }
+
+  if (cmd === "nuke") {
+    if (!member.permissions.has(PermissionFlagsBits.ManageChannels)) return message.reply("❌ You need **Manage Channels** permission.");
+    const ch = message.channel as TextChannel;
+    const cloned = await ch.clone({ reason: `Nuked by ${author.tag}` });
+    await ch.delete().catch(() => {});
+    cloned.send({ embeds: [new EmbedBuilder().setColor(0xff4444).setTitle("💣 Channel Nuked").setDescription("This channel was nuked and recreated.").setTimestamp()] });
+    return;
+  }
+
+  if (cmd === "lockserver") {
+    if (!member.permissions.has(PermissionFlagsBits.Administrator)) return message.reply("❌ You need **Administrator** permission.");
+    const reason = args.join(" ") || "Emergency lockdown";
+    const { ChannelType } = await import("discord.js");
+    const channels = guild.channels.cache.filter((c: any) => c.type === ChannelType.GuildText);
+    let locked = 0;
+    for (const [, ch] of channels) {
+      try { await (ch as TextChannel).permissionOverwrites.edit(guild.roles.everyone, { SendMessages: false }); locked++; } catch {}
+    }
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0xff0000).setTitle("🔒 Server Locked!").setDescription(`Locked **${locked}** channels.\n**Reason:** ${reason}`).setFooter({ text: "RYZENX™ Security" }).setTimestamp()] });
+  }
+
+  if (cmd === "unlockserver") {
+    if (!member.permissions.has(PermissionFlagsBits.Administrator)) return message.reply("❌ You need **Administrator** permission.");
+    const { ChannelType } = await import("discord.js");
+    const channels = guild.channels.cache.filter((c: any) => c.type === ChannelType.GuildText);
+    let unlocked = 0;
+    for (const [, ch] of channels) {
+      try { await (ch as TextChannel).permissionOverwrites.edit(guild.roles.everyone, { SendMessages: null }); unlocked++; } catch {}
+    }
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0x00ff88).setTitle("🔓 Server Unlocked!").setDescription(`Unlocked **${unlocked}** channels.`).setFooter({ text: "RYZENX™ Security" }).setTimestamp()] });
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // ROLE MANAGEMENT
+  // ─────────────────────────────────────────────────────────────
+
+  if (cmd === "addrole") {
+    if (!member.permissions.has(PermissionFlagsBits.ManageRoles)) return message.reply("❌ You need **Manage Roles** permission.");
+    const target = message.mentions.members?.first();
+    const role = message.mentions.roles.first();
+    if (!target || !role) return message.reply("❌ **Usage:** `+addrole @user @role`");
+    await target.roles.add(role).catch(() => {});
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0x00ff88).setDescription(`✅ Added **${role.name}** to **${target.user.tag}**.`)] });
+  }
+
+  if (cmd === "removerole") {
+    if (!member.permissions.has(PermissionFlagsBits.ManageRoles)) return message.reply("❌ You need **Manage Roles** permission.");
+    const target = message.mentions.members?.first();
+    const role = message.mentions.roles.first();
+    if (!target || !role) return message.reply("❌ **Usage:** `+removerole @user @role`");
+    await target.roles.remove(role).catch(() => {});
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0xff6600).setDescription(`✅ Removed **${role.name}** from **${target.user.tag}**.`)] });
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // EXTENDED MODERATION
+  // ─────────────────────────────────────────────────────────────
+
+  if (cmd === "softban") {
+    if (!member.permissions.has(PermissionFlagsBits.BanMembers)) return message.reply("❌ You need **Ban Members** permission.");
+    const target = message.mentions.members?.first();
+    if (!target) return message.reply("❌ Mention a member to softban.");
+    const reason = args.slice(1).join(" ") || "Softban (message purge)";
+    await target.ban({ deleteMessageSeconds: 7 * 24 * 60 * 60, reason: `${author.tag}: ${reason}` });
+    await guild.bans.remove(target.id).catch(() => {});
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0xff8800).setTitle("🧹 Softbanned").setDescription(`**${target.user.tag}**'s messages were deleted.\n**Reason:** ${reason}`).setFooter({ text: "RYZENX™ Security" })] });
+  }
+
+  if (cmd === "unmute" || cmd === "untimeout") {
+    if (!member.permissions.has(PermissionFlagsBits.ModerateMembers)) return message.reply("❌ You need **Moderate Members** permission.");
+    const target = message.mentions.members?.first();
+    if (!target) return message.reply("❌ Mention a member to unmute.");
+    await target.timeout(null);
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0x00ff88).setDescription(`✅ **${target.user.tag}** has been unmuted.`)] });
+  }
+
+  if (cmd === "massban") {
+    if (!member.permissions.has(PermissionFlagsBits.Administrator)) return message.reply("❌ You need **Administrator** permission.");
+    const mentions = message.mentions.users;
+    if (!mentions.size) return message.reply("❌ Mention users to massban.");
+    const reason = args.slice(mentions.size).join(" ") || "Mass ban";
+    let banned = 0;
+    for (const [, user] of mentions) {
+      try { await guild.members.ban(user, { reason: `${author.tag}: ${reason}` }); banned++; } catch {}
+    }
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0xff4444).setTitle("🔨 Mass Ban").setDescription(`Banned **${banned}/${mentions.size}** users.\n**Reason:** ${reason}`).setFooter({ text: "RYZENX™ Security" }).setTimestamp()] });
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // MOD HISTORY & CASES
+  // ─────────────────────────────────────────────────────────────
+
+  if (cmd === "warnings" || cmd === "warns") {
+    if (!member.permissions.has(PermissionFlagsBits.ModerateMembers)) return message.reply("❌ You need **Moderate Members** permission.");
+    const target = message.mentions.users.first();
+    if (!target) return message.reply("❌ Mention a user.");
+    const result = await pool.query("SELECT * FROM warnings WHERE user_id = $1 AND guild_id = $2 ORDER BY created_at DESC LIMIT 10", [target.id, guild.id]);
+    if (!result.rows.length) return message.reply({ embeds: [new EmbedBuilder().setColor(0x00ff88).setDescription(`✅ **${target.tag}** has no warnings.`)] });
+    const lines = result.rows.map((w: any) => {
+      const ts = Math.floor(new Date(w.created_at).getTime() / 1000);
+      return `**#${w.id}** <t:${ts}:R> — ${w.reason} *(by <@${w.moderator_id}>)*`;
+    });
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0xff6600).setAuthor({ name: `${target.tag}'s Warnings`, iconURL: target.displayAvatarURL() }).setDescription(lines.join("\n")).setFooter({ text: `RYZENX™ • ${result.rows.length} warning(s)` })] });
+  }
+
+  if (cmd === "history") {
+    if (!member.permissions.has(PermissionFlagsBits.ModerateMembers)) return message.reply("❌ You need **Moderate Members** permission.");
+    const target = message.mentions.users.first();
+    if (!target) return message.reply("❌ **Usage:** `+history @user`");
+    const result = await pool.query("SELECT * FROM warnings WHERE user_id = $1 AND guild_id = $2 ORDER BY created_at DESC LIMIT 15", [target.id, guild.id]);
+    if (!result.rows.length) return message.reply({ embeds: [new EmbedBuilder().setColor(0x00ff88).setDescription(`✅ **${target.tag}** has a clean record.`)] });
+    const lines = result.rows.map((w: any) => {
+      const ts = Math.floor(new Date(w.created_at).getTime() / 1000);
+      return `**#${w.id}** <t:${ts}:R> — ${w.reason}`;
+    });
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0xff8800).setAuthor({ name: `${target.tag} — Mod History`, iconURL: target.displayAvatarURL() }).setDescription(lines.join("\n")).setFooter({ text: `RYZENX™ • ${result.rows.length} action(s)` }).setTimestamp()] });
+  }
+
+  if (cmd === "clearwarns" || cmd === "clearwarnings") {
+    if (!member.permissions.has(PermissionFlagsBits.Administrator)) return message.reply("❌ You need **Administrator** permission.");
+    const target = message.mentions.users.first();
+    if (!target) return message.reply("❌ Mention a user.");
+    const result = await pool.query("DELETE FROM warnings WHERE user_id = $1 AND guild_id = $2", [target.id, guild.id]);
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0x00ff88).setDescription(`✅ Cleared **${result.rowCount ?? 0}** warning(s) for **${target.tag}**.`)] });
+  }
+
+  if (cmd === "case") {
+    if (!member.permissions.has(PermissionFlagsBits.ModerateMembers)) return message.reply("❌ You need **Moderate Members** permission.");
+    const caseId = parseInt(args[0]);
+    if (isNaN(caseId) || caseId < 1 || caseId > 2_147_483_647) return message.reply("❌ Provide a valid case ID.");
+    const result = await pool.query("SELECT * FROM warnings WHERE id = $1 AND guild_id = $2", [caseId, guild.id]);
+    if (!result.rows.length) return message.reply(`❌ Case **#${caseId}** not found.`);
+    const c = result.rows[0];
+    const ts = Math.floor(new Date(c.created_at).getTime() / 1000);
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0xff6600).setTitle(`🗂️ Case #${caseId}`).addFields({ name: "👤 User", value: `<@${c.user_id}>`, inline: true }, { name: "👮 Moderator", value: `<@${c.moderator_id}>`, inline: true }, { name: "📋 Reason", value: c.reason }, { name: "📅 Date", value: `<t:${ts}:F>` }).setFooter({ text: "RYZENX™ Moderation" })] });
+  }
+
+  if (cmd === "bans" || cmd === "viewbans") {
+    if (!member.permissions.has(PermissionFlagsBits.BanMembers)) return message.reply("❌ You need **Ban Members** permission.");
+    const bans = await guild.bans.fetch().catch(() => null);
+    if (!bans || !bans.size) return message.reply("✅ No banned users.");
+    const lines = [...bans.values()].slice(0, 15).map((b, i) => `**${i + 1}.** ${b.user.tag} \`${b.user.id}\` — ${b.reason || "No reason"}`);
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0xff4444).setTitle(`🔨 Server Bans (${bans.size})`).setDescription(lines.join("\n")).setFooter({ text: "RYZENX™ Security" }).setTimestamp()] });
+  }
+
+  if (cmd === "setprefix") {
+    if (!member.permissions.has(PermissionFlagsBits.Administrator)) return message.reply("❌ You need **Administrator** permission.");
+    const newPrefix = args[0];
+    if (!newPrefix || newPrefix.length > 5) return message.reply("❌ Provide a valid prefix (1–5 characters).");
+    await pool.query("INSERT INTO guild_settings (guild_id, prefix) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET prefix = $2", [guild.id, newPrefix]);
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0x00ff88).setDescription(`✅ Prefix changed to \`${newPrefix}\`. Use \`${newPrefix}help\` for commands.`)] });
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // SYSTEM SHORTCUTS
+  // ─────────────────────────────────────────────────────────────
+
+  if (cmd === "music") {
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0x5865f2).setTitle("🎵 RYZENX™ Music Master").setDescription("Use **slash commands** for music!\n\n**Available commands:**\n`/music play <song>` — Play a song\n`/music skip` — Skip current\n`/music queue` — View queue\n`/music pause/resume` — Pause/Resume\n`/music volume <1-100>` — Set volume\n`/music loop` — Toggle loop\n`/music stop` — Stop & disconnect").setFooter({ text: "RYZENX™ Music Master" })] });
+  }
+
+  if (cmd === "ticket" || cmd === "t") {
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0x5865f2).setTitle("🎫 RYZENX™ Ticket System").setDescription("Use **slash commands** for tickets!\n\n**Available commands:**\n`/ticket create` — Open a ticket\n`/ticket close` — Close ticket\n`/ticket add @user` — Add user\n`/ticket remove @user` — Remove user\n`/ticket transcript` — Save transcript\n`/ticket priority <level>` — Set priority\n`/ticket list` — List open tickets\n`/ticket setup` — Configure system").setFooter({ text: "RYZENX™ Ticket System" })] });
+  }
+
+  if (cmd === "vm" || cmd === "voice") {
+    return message.reply({ embeds: [new EmbedBuilder().setColor(0x5865f2).setTitle("🎙️ RYZENX™ Voice Master").setDescription("Use **slash commands** for voice channels!\n\n**Available commands:**\n`/voicemaster setup` — Setup\n`/voicemaster lock/unlock` — Lock VC\n`/voicemaster name <name>` — Rename\n`/voicemaster limit <n>` — Set limit\n`/voicemaster permit @user` — Allow user\n`/voicemaster kick/ban @user` — Kick/Ban\n`/voicemaster region <region>` — Set region\n`/voicemaster ghost` — Toggle ghost mode").setFooter({ text: "RYZENX™ Voice Master" })] });
+  }
 }
