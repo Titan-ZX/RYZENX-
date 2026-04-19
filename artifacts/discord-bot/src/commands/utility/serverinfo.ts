@@ -91,3 +91,17 @@ export default {
     await interaction.reply({ embeds: [embed] });
   },
 };
+
+import express from "express";
+
+const app = express();
+
+app.get("/", (req, res) => {
+  res.send("Bot is alive!");
+});
+
+export function startServer() {
+  app.listen(3000, () => {
+    console.log("[Web] Server running on port 3000");
+  });
+}
