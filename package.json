@@ -1,16 +1,13 @@
 {
-  "name": "workspace",
-  "version": "0.0.0",
-  "license": "MIT",
-  "private": true,
+  "name": "discord-bot",
+  "version": "1.0.0",
+  "main": "index.js",
   "scripts": {
-    "start": "ts-node src/index.ts",
-    "dev": "ts-node src/index.ts",
-    "build": "tsc"
+    "start": "npx ts-node src/index.ts"
   },
+  "dependencies": {},
   "devDependencies": {
-    "typescript": "~5.9.2",
-    "prettier": "^3.8.1",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.0.0"
   }
 }
