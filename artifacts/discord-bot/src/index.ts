@@ -4,7 +4,6 @@ import { loadCommands } from "./commands";
 import { loadEvents } from "./events";
 import { startReminderCron } from "./handlers/reminders";
 import { startGiveawayCron } from "./handlers/giveaway";
-import { startServer } from "./Serverinfo";
 
 async function main() {
   console.log("[Bot] Starting Discord bot...");
