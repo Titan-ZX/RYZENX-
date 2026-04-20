@@ -55,7 +55,6 @@ async function main() {
 
   // 🔹 Server (optional)
   try {
-    startServer();
   } catch {
     console.warn("[Bot] Server not started");
   }
