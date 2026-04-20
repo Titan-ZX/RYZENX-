@@ -9,8 +9,12 @@ import { startServer } from "./Serverinfo";
 async function main() {
   console.log("[Bot] Starting Discord bot...");
 
-  await initDatabase();
-  console.log("[Bot] Database initialized");
+  try {
+    await initDatabase();
+    console.log("[Bot] Database initialized");
+  } catch {
+    console.warn("[Bot] Database skipped");
+  }
 
   loadCommands(client);
   console.log("[Bot] Commands loaded");
