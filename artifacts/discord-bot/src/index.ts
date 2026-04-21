@@ -4,6 +4,17 @@ import { loadCommands } from "./commands";
 import { loadEvents } from "./events";
 import { startReminderCron } from "./handlers/reminders";
 import { startGiveawayCron } from "./handlers/giveaway";
+import express from "express";
+
+// 🌐 Express server (Render fix)
+const app = express();
+app.get("/", (req, res) => {
+  res.send("Bot is running ✅");
+});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log("🌐 Web server running on port " + PORT);
+});
 
 async function main() {
   console.log("[Bot] Starting Discord bot...");
@@ -12,7 +23,7 @@ async function main() {
   try {
     await initDatabase();
     console.log("[Bot] Database initialized");
-  } catch (err) {
+  } catch {
     console.warn("[Bot] Database skipped");
   }
 
@@ -36,7 +47,7 @@ async function main() {
   try {
     startReminderCron(client);
     startGiveawayCron(client);
-  } catch (err) {
+  } catch {
     console.warn("[Bot] Cron failed");
   }
 
@@ -52,12 +63,6 @@ async function main() {
   // 🔹 Login
   await client.login(token);
   console.log("[Bot] Logged in successfully");
-
-  // 🔹 Server (optional)
-  try {
-  } catch {
-    console.warn("[Bot] Server not started");
-  }
 }
 
 main().catch((err) => {
