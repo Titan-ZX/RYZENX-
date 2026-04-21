@@ -1,8 +1,5 @@
 import { ExtendedClient } from "../types";
 
-// 🎵 Music
-import music from "./music/music";
-
 // Existing
 import automod from "./automod/automod";
 import ban from "./security/ban";
