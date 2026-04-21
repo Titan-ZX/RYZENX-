@@ -6,55 +6,28 @@ import { startReminderCron } from "./handlers/reminders";
 import { startGiveawayCron } from "./handlers/giveaway";
 import express from "express";
 
-const app = express();
+// 🔥 Crash debug (VERY IMPORTANT)
+process.on("unhandledRejection", (err) => {
+  console.error("❌ UNHANDLED REJECTION:", err);
+});
+process.on("uncaughtException", (err) => {
+  console.error("❌ UNCAUGHT EXCEPTION:", err);
+});
 
+// 🌐 Express server (Render fix)
+const app = express();
 app.get("/", (req, res) => {
   res.send("Bot is running ✅");
 });
-
 const PORT = process.env.PORT || 3000;
-
-// 🔥 IMPORTANT CHANGE
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🌐 Server running on ${PORT}`);
+  console.log("🌐 Web server running on port " + PORT);
 });
 
 async function main() {
   console.log("[Bot] Starting Discord bot...");
 
-  // 🔹 DB (safe)
-  try {
-    await initDatabase();
-    console.log("[Bot] Database initialized");
-  } catch {
-    console.warn("[Bot] Database skipped");
-  }
-
-  // 🔹 Commands
-  try {
-    loadCommands(client);
-    console.log("[Bot] Commands loaded");
-  } catch (err) {
-    console.error("[Bot] Commands failed:", err);
-  }
-
-  // 🔹 Events
-  try {
-    loadEvents(client);
-    console.log("[Bot] Events loaded");
-  } catch (err) {
-    console.error("[Bot] Events failed:", err);
-  }
-
-  // 🔹 Cron jobs
-  try {
-    startReminderCron(client);
-    startGiveawayCron(client);
-  } catch {
-    console.warn("[Bot] Cron failed");
-  }
-
-  // 🔹 Token check
+  // 🔹 Token check FIRST
   const token = process.env.DISCORD_TOKEN;
   console.log("Token check:", token ? "OK" : "MISSING");
 
@@ -63,9 +36,38 @@ async function main() {
     process.exit(1);
   }
 
-  // 🔹 Login
+  // 🔹 Try ONLY login first (debug mode)
   await client.login(token);
   console.log("[Bot] Logged in successfully");
+
+  // 🔹 बाकी सब बाद में (optional)
+  try {
+    await initDatabase();
+    console.log("[Bot] Database initialized");
+  } catch {
+    console.warn("[Bot] Database skipped");
+  }
+
+  try {
+    loadCommands(client);
+    console.log("[Bot] Commands loaded");
+  } catch (err) {
+    console.error("[Bot] Commands failed:", err);
+  }
+
+  try {
+    loadEvents(client);
+    console.log("[Bot] Events loaded");
+  } catch (err) {
+    console.error("[Bot] Events failed:", err);
+  }
+
+  try {
+    startReminderCron(client);
+    startGiveawayCron(client);
+  } catch {
+    console.warn("[Bot] Cron failed");
+  }
 }
 
 main().catch((err) => {
