@@ -6,14 +6,17 @@ import { startReminderCron } from "./handlers/reminders";
 import { startGiveawayCron } from "./handlers/giveaway";
 import express from "express";
 
-// 🌐 Express server (Render fix)
 const app = express();
+
 app.get("/", (req, res) => {
   res.send("Bot is running ✅");
 });
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("🌐 Web server running on port " + PORT);
+
+// 🔥 IMPORTANT CHANGE
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🌐 Server running on ${PORT}`);
 });
 
 async function main() {
